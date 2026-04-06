@@ -6,9 +6,17 @@ const Groq = require('groq-sdk');
 const app = express();
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+// middleware
 app.use(express.json());
 app.use(cors());
 
+// PORT cho Render
+const PORT = process.env.PORT || 4000;
+
+// test route (để mở web không bị trắng)
+app.get("/", (req, res) => {
+  res.send("MilkBot API đang chạy ");
+});
 const SYSTEM = `Bạn là Mai — tư vấn viên của MilkStore, cửa hàng sữa uy tín tại Việt Nam.
 Phong cách: thân thiện, xưng mình/bạn, câu ngắn, dễ đọc trên điện thoại.
 Kết thúc mỗi tin nhắn bằng một câu hỏi hoặc gợi ý hành động.
@@ -122,28 +130,40 @@ Quy tắc chung:
 const sessions = {};
 
 app.post('/chat', async (req, res) => {
-  const { sessionId, message } = req.body;
+  try {
+    const { sessionId, message } = req.body;
 
-  if (!sessions[sessionId]) {
-    sessions[sessionId] = [
-      { role: 'system', content: SYSTEM }
-    ];
+    if (!sessionId || !message) {
+      return res.status(400).json({ error: "Thiếu sessionId hoặc message" });
+    }
+
+    if (!sessions[sessionId]) {
+      sessions[sessionId] = [
+        { role: 'system', content: SYSTEM }
+      ];
+    }
+
+    sessions[sessionId].push({ role: 'user', content: message });
+
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: sessions[sessionId],
+      max_tokens: 500
+    });
+
+    const reply = response.choices[0].message.content;
+
+    sessions[sessionId].push({ role: 'assistant', content: reply });
+
+    res.json({ reply });
+
+  } catch (err) {
+    console.error("Lỗi:", err);
+    res.status(500).json({ error: "Lỗi server" });
   }
-
-  sessions[sessionId].push({ role: 'user', content: message });
-
-  const response = await groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
-    messages: sessions[sessionId],
-    max_tokens: 500
-  });
-
-  const reply = response.choices[0].message.content;
-  sessions[sessionId].push({ role: 'assistant', content: reply });
-
-  res.json({ reply });
 });
 
-app.listen(4000, () => {
-  console.log('MilkBot đang chạy tại http://localhost:4000');
+// chạy server
+app.listen(PORT, () => {
+  console.log(`MilkBot đang chạy tại port ${PORT}`);
 });
