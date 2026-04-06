@@ -1,0 +1,172 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>MilkBot</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #f0f2f5;
+        }
+
+        #chatbox {
+            width: 360px;
+            height: 520px;
+            margin: 30px auto;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        }
+
+        #header {
+            padding: 10px;
+            background: #0084ff;
+            color: white;
+            border-radius: 12px 12px 0 0;
+            font-weight: bold;
+        }
+
+        #messages {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        .row {
+            display: flex;
+            margin: 5px 0;
+        }
+
+        .user-row {
+            justify-content: flex-end;
+        }
+
+        .bot-row {
+            justify-content: flex-start;
+        }
+
+        .msg {
+            padding: 8px 12px;
+            border-radius: 15px;
+            max-width: 70%;
+        }
+
+        .user {
+            background: #0084ff;
+            color: white;
+        }
+
+        .bot {
+            background: #e4e6eb;
+        }
+
+        #inputBox {
+            display: flex;
+            border-top: 1px solid #ccc;
+        }
+
+            #inputBox input {
+                flex: 1;
+                padding: 10px;
+                border: none;
+            }
+
+            #inputBox button {
+                padding: 10px;
+                border: none;
+                background: #0084ff;
+                color: white;
+            }
+
+        .typing {
+            font-style: italic;
+            color: gray;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div id="chatbox">
+        <div id="header">MilkBot 🥛</div>
+        <div id="messages"></div>
+
+        <div id="inputBox">
+            <input id="msg" placeholder="Nhập tin nhắn..." />
+            <button onclick="send()">Gửi</button>
+        </div>
+    </div>
+
+    <script>
+const MB_SERVER = "https://milkbot.onrender.com";
+const messages = document.getElementById("messages");
+
+// load lại lịch sử
+window.onload = () => {
+  const history = JSON.parse(localStorage.getItem("chat") || "[]");
+  history.forEach(m => addMsg(m.text, m.type));
+};
+
+function save(text, type) {
+  const history = JSON.parse(localStorage.getItem("chat") || "[]");
+  history.push({ text, type });
+  localStorage.setItem("chat", JSON.stringify(history));
+}
+
+function addMsg(text, type) {
+  const row = document.createElement("div");
+  row.className = "row " + (type === "user" ? "user-row" : "bot-row");
+
+  const div = document.createElement("div");
+  div.className = "msg " + type;
+  div.innerText = text;
+
+  row.appendChild(div);
+  messages.appendChild(row);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+async function send() {
+  const input = document.getElementById("msg");
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  addMsg(msg, "user");
+  save(msg, "user");
+  input.value = "";
+
+  const typing = document.createElement("div");
+  typing.className = "typing";
+  typing.id = "typing";
+  typing.innerText = "MilkBot đang trả lời...";
+  messages.appendChild(typing);
+  messages.scrollTop = messages.scrollHeight;
+
+  const res = await fetch(MB_SERVER + "/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sessionId: "user1",
+      message: msg
+    })
+  });
+
+  const data = await res.json();
+  document.getElementById("typing").remove();
+
+  addMsg(data.reply, "bot");
+  save(data.reply, "bot");
+}
+
+// gửi bằng Enter
+document.getElementById("msg").addEventListener("keypress", function(e) {
+  if (e.key === "Enter") send();
+});
+    </script>
+
+</body>
+</html>

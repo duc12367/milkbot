@@ -7,15 +7,15 @@ const app = express();
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // middleware
+app.use(express.static('public'));
 app.use(express.json());
 app.use(cors());
 
 // PORT cho Render
 const PORT = process.env.PORT || 4000;
 
-// test route (để mở web không bị trắng)
 app.get("/", (req, res) => {
-  res.send("MilkBot API đang chạy ");
+  res.sendFile(__dirname + "/public/index.html");
 });
 const SYSTEM = `Bạn là Mai — tư vấn viên của MilkStore, cửa hàng sữa uy tín tại Việt Nam.
 Phong cách: thân thiện, xưng mình/bạn, câu ngắn, dễ đọc trên điện thoại.
