@@ -8,27 +8,50 @@
         body {
             font-family: Arial;
             background: #f0f2f5;
+            margin: 0;
         }
 
+        /* HEADER */
+        #header {
+            background: #ff5722;
+            color: white;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+        }
+
+        .online {
+            width: 8px;
+            height: 8px;
+            background: lime;
+            border-radius: 50%;
+            margin-left: 5px;
+        }
+
+        /* BOX */
         #chatbox {
             width: 360px;
-            height: 520px;
-            margin: 30px auto;
+            height: 560px;
+            margin: 20px auto;
             background: white;
             border-radius: 12px;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            overflow: hidden;
         }
 
-        #header {
-            padding: 10px;
-            background: #0084ff;
-            color: white;
-            border-radius: 12px 12px 0 0;
-            font-weight: bold;
-        }
-
+        /* MESSAGES */
         #messages {
             flex: 1;
             padding: 10px;
@@ -49,20 +72,22 @@
         }
 
         .msg {
-            padding: 8px 12px;
-            border-radius: 15px;
+            padding: 10px;
+            border-radius: 18px;
             max-width: 70%;
+            font-size: 14px;
         }
 
         .user {
-            background: #0084ff;
+            background: #ff5722;
             color: white;
         }
 
         .bot {
-            background: #e4e6eb;
+            background: #eee;
         }
 
+        /* INPUT */
         #inputBox {
             display: flex;
             border-top: 1px solid #ccc;
@@ -77,9 +102,42 @@
             #inputBox button {
                 padding: 10px;
                 border: none;
-                background: #0084ff;
+                background: #ff5722;
                 color: white;
             }
+
+        /* QUICK */
+        #quick {
+            padding: 5px;
+        }
+
+            #quick button {
+                margin: 3px;
+                border: none;
+                padding: 5px;
+                background: #ddd;
+            }
+
+        /* TABS */
+        #tabs {
+            display: flex;
+            justify-content: space-around;
+            padding: 8px;
+            background: white;
+            border-top: 1px solid #ccc;
+        }
+
+        .tab {
+            cursor: pointer;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .active {
+            display: block;
+        }
 
         .typing {
             font-style: italic;
@@ -92,80 +150,180 @@
 <body>
 
     <div id="chatbox">
-        <div id="header">MilkBot 🥛</div>
-        <div id="messages"></div>
 
-        <div id="inputBox">
-            <input id="msg" placeholder="Nhập tin nhắn..." />
-            <button onclick="send()">Gửi</button>
+        <!-- HEADER -->
+        <div id="header">
+            <div class="avatar">🥛</div>
+            <div>
+                <b>Mai</b> <span class="online"></span><br>
+                <small>Đang trực tuyến</small>
+            </div>
         </div>
+
+        <!-- CHAT -->
+        <div id="chat" class="section active">
+            <div id="messages"></div>
+
+            <div id="quick">
+                <button onclick="sendQuick('Sữa cho bé sơ sinh')">Sữa cho bé</button>
+                <button onclick="sendQuick('Sữa tăng cân')">Tăng cân</button>
+                <button onclick="sendQuick('Sữa người già')">Người già</button>
+            </div>
+
+            <div id="inputBox">
+                <input id="msg" placeholder="Nhập tin nhắn..." />
+                <button onclick="send()">Gửi</button>
+            </div>
+        </div>
+
+        <!-- CART -->
+        <div id="cart" class="section">
+            <h3>🛒 Giỏ hàng</h3>
+            <div id="cartItems"></div>
+            <p>Tổng: <span id="total">0</span>đ</p>
+        </div>
+
+        <!-- SHIPPING -->
+        <div id="ship" class="section">
+            <h3>🚚 Vận chuyển</h3>
+            <p>Giao tiêu chuẩn</p>
+            <p>Giao nhanh</p>
+            <p>Nhận tại cửa hàng</p>
+        </div>
+
+        <!-- ORDERS -->
+        <div id="orders" class="section">
+            <h3>📦 Đơn hàng</h3>
+            <div id="orderList"></div>
+        </div>
+
+        <!-- TAB -->
+        <div id="tabs">
+            <div class="tab" onclick="showTab('chat')">💬</div>
+            <div class="tab" onclick="showTab('cart')">🛒</div>
+            <div class="tab" onclick="showTab('ship')">🚚</div>
+            <div class="tab" onclick="showTab('orders')">📦</div>
+        </div>
+
     </div>
 
     <script>
-const MB_SERVER = "https://milkbot.onrender.com";
-const messages = document.getElementById("messages");
+        const MB_SERVER = "https://milkbot.onrender.com";
+        const messages = document.getElementById("messages");
 
-// load lại lịch sử
-window.onload = () => {
-  const history = JSON.parse(localStorage.getItem("chat") || "[]");
-  history.forEach(m => addMsg(m.text, m.type));
-};
+        let cart = [];
 
-function save(text, type) {
-  const history = JSON.parse(localStorage.getItem("chat") || "[]");
-  history.push({ text, type });
-  localStorage.setItem("chat", JSON.stringify(history));
-}
+        /* LOAD CHAT */
+        window.onload = () => {
+            const history = JSON.parse(localStorage.getItem("chat") || "[]");
+            history.forEach(m => addMsg(m.text, m.type));
+            loadOrders();
+        };
 
-function addMsg(text, type) {
-  const row = document.createElement("div");
-  row.className = "row " + (type === "user" ? "user-row" : "bot-row");
+        /* SAVE */
+        function save(text, type) {
+            const history = JSON.parse(localStorage.getItem("chat") || "[]");
+            history.push({ text, type });
+            localStorage.setItem("chat", JSON.stringify(history));
+        }
 
-  const div = document.createElement("div");
-  div.className = "msg " + type;
-  div.innerText = text;
+        /* ADD MSG */
+        function addMsg(text, type) {
+            const row = document.createElement("div");
+            row.className = "row " + (type === "user" ? "user-row" : "bot-row");
 
-  row.appendChild(div);
-  messages.appendChild(row);
-  messages.scrollTop = messages.scrollHeight;
-}
+            const div = document.createElement("div");
+            div.className = "msg " + type;
+            div.innerText = text;
 
-async function send() {
-  const input = document.getElementById("msg");
-  const msg = input.value.trim();
-  if (!msg) return;
+            row.appendChild(div);
+            messages.appendChild(row);
+            messages.scrollTop = messages.scrollHeight;
+        }
 
-  addMsg(msg, "user");
-  save(msg, "user");
-  input.value = "";
+        /* SEND */
+        async function send() {
+            const input = document.getElementById("msg");
+            const msg = input.value.trim();
+            if (!msg) return;
 
-  const typing = document.createElement("div");
-  typing.className = "typing";
-  typing.id = "typing";
-  typing.innerText = "MilkBot đang trả lời...";
-  messages.appendChild(typing);
-  messages.scrollTop = messages.scrollHeight;
+            addMsg(msg, "user");
+            save(msg, "user");
+            input.value = "";
 
-  const res = await fetch(MB_SERVER + "/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      sessionId: "user1",
-      message: msg
-    })
-  });
+            const typing = document.createElement("div");
+            typing.className = "typing";
+            typing.id = "typing";
+            typing.innerText = "Mai đang trả lời...";
+            messages.appendChild(typing);
 
-  const data = await res.json();
-  document.getElementById("typing").remove();
+            const res = await fetch(MB_SERVER + "/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sessionId: "user1", message: msg })
+            });
 
-  addMsg(data.reply, "bot");
-  save(data.reply, "bot");
-}
+            const data = await res.json();
+            document.getElementById("typing").remove();
 
-// gửi bằng Enter
-document.getElementById("msg").addEventListener("keypress", function(e) {
-  if (e.key === "Enter") send();
-});
+            addMsg(data.reply, "bot");
+            save(data.reply, "bot");
+
+            // thêm giỏ hàng
+            data.products.forEach(p => cart.push(p));
+            updateCart();
+        }
+
+        /* QUICK */
+        function sendQuick(text) {
+            document.getElementById("msg").value = text;
+            send();
+        }
+
+        /* CART */
+        function updateCart() {
+            const box = document.getElementById("cartItems");
+            box.innerHTML = "";
+            let total = 0;
+
+            cart.forEach((p, i) => {
+                total += p.price;
+                box.innerHTML += `
+          <div>
+            ${p.name} - ${p.price}đ
+            <button onclick="removeItem(${i})">-</button>
+          </div>
+        `;
+            });
+
+            document.getElementById("total").innerText = total;
+        }
+
+        function removeItem(i) {
+            cart.splice(i, 1);
+            updateCart();
+        }
+
+        /* TAB */
+        function showTab(id) {
+            document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+            document.getElementById(id).classList.add("active");
+        }
+
+        /* ORDERS */
+        function loadOrders() {
+            const status = ["Chờ xác nhận", "Đang giao", "Đã nhận"];
+            let html = "";
+            for (let i = 0; i < 4; i++) {
+                html += `<p>Đơn #${Math.floor(Math.random() * 1000)} - ${status[Math.floor(Math.random() * 3)]}</p>`;
+            }
+            document.getElementById("orderList").innerHTML = html;
+        }
+
+        /* ENTER */
+        document.getElementById("msg").addEventListener("keypress", function (e) {
+            if (e.key === "Enter") send();
+        });
     </script>
 
 </body>
